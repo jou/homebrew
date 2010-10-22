@@ -8,43 +8,29 @@ class Zookeeper <Formula
   def shim_script target
     <<-EOS.undent
       #!/usr/bin/env bash
-      . #{zk_etc+'defaults'}
-      export ZOOCFGDIR
+      . "#{etc}/zookeeper/defaults"
       cd #{libexec}/bin
       ./#{target} $*
     EOS
   end
 
   def default_zk_env
-    <<-EOS
-      ZOOCFGDIR="#{zk_etc}"
+    <<-EOS.undent
+      export ZOOCFGDIR="#{etc}/zookeeper"
     EOS
   end
 
   def default_log4j_properties
-    <<-EOS
+    <<-EOS.undent
       log4j.rootCategory=WARN, zklog
 
       log4j.appender.zklog = org.apache.log4j.FileAppender
-      log4j.appender.zklog.File = #{zk_log_dir+'zookeeper.log'}
+      log4j.appender.zklog.File = #{var}/log/zookeeper/zookeeper.log
       log4j.appender.zklog.Append = true
       log4j.appender.zklog.layout = org.apache.log4j.PatternLayout
       log4j.appender.zklog.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss} %c{1} [%p] %m%n
     EOS
   end
-
-  def zk_etc
-    etc+'zookeeper'
-  end
-
-  def zk_log_dir
-    var+'log'+'zookeeper'
-  end
-
-  def zk_data_dir
-    var+'run'+'zookeeper'+'data'
-  end
-
 
   def install
     # Remove windows executables
@@ -56,9 +42,9 @@ class Zookeeper <Formula
 
     # Create neccessary directories
     bin.mkpath
-    zk_etc.mkpath
-    zk_log_dir.mkpath
-    zk_data_dir.mkpath
+    (etc+'zookeeper').mkpath
+    (var+'log'+'zookeeper').mkpath
+    (var+'run'+'zookeeper'+'data').mkpath
 
     # Install shim scripts to bin
     bin_excludes = %w(README.txt zkEnv.sh)
@@ -74,15 +60,15 @@ class Zookeeper <Formula
     }
 
     # Install default config files
-    defaults = zk_etc+'defaults'
+    defaults = etc+'zookeeper'+'defaults'
     defaults.write(default_zk_env) if !defaults.exist?
 
-    log4j_properties = zk_etc+'log4j.properties'
-    log4j_properties.write(default_log4j_properties) if !log4j_properties.exist?
+    log4j_properties = etc+'zookeeper'+'log4j.properties'
+    log4j_properties.write(default_log4j_properties) unless log4j_properties.exist?
 
-    zoo_cfg = zk_etc+'zoo.cfg'
-    if !zoo_cfg.exist?
-      inreplace 'conf/zoo_sample.cfg', /^dataDir=.*/, "dataDir=#{zk_data_dir}"
+    zoo_cfg = etc+'zookeeper'+'zoo.cfg'
+    unless zoo_cfg.exist?
+      inreplace 'conf/zoo_sample.cfg', /^dataDir=.*/, "dataDir=#{var}/run/zookeeper/data"
       cp 'conf/zoo_sample.cfg', zoo_cfg
     end
   end
